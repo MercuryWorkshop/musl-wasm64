@@ -49,7 +49,7 @@ struct epoll_event {
 	uint32_t events;
 	epoll_data_t data;
 }
-#if defined(__x86_64__) || defined(__wasm32__) /* wasm32: the i386 kernel layout, 12 bytes */
+#if defined(__x86_64__) || defined(__wasm32__) || defined(__wasm64__) /* wasm32: the i386 kernel layout, 12 bytes; wasm64: the x86-64 one */
 __attribute__ ((__packed__))
 #endif
 ;

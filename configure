@@ -339,6 +339,7 @@ powerpc*|ppc*) ARCH=powerpc ;;
 riscv64*) ARCH=riscv64 ;;
 riscv32*) ARCH=riscv32 ;;
 wasm32*) ARCH=wasm32 ;;
+wasm64*) ARCH=wasm64 ;;
 sh[1-9bel-]*|sh|superh*) ARCH=sh ;;
 s390x*) ARCH=s390x ;;
 unknown) fail "$0: unable to detect target arch; try $0 --target=..." ;;
