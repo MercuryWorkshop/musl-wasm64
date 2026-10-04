@@ -15,6 +15,7 @@
  * __gex_thread_start like a program's, already attached. */
 #define SYSCALL_NO_TLS 1
 #include <elf.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
@@ -25,6 +26,7 @@
 #include "atomic.h"
 
 void __init_libc(char **, char *);
+extern char **__environ;
 void *__copy_tls(unsigned char *);
 int __init_tp(void *);
 void __wasm_init_tls(void *);
