@@ -85,6 +85,10 @@ void __gex_provider_init(void)
 	static size_t fake[] = { 0, AT_PAGESZ, 4096, AT_UID, 0, AT_EUID, 0, AT_GID, 0, AT_EGID, 0, 0, 0 };
 	__init_libc((char **)fake, "gex-provider");
 	set_stack(__pthread_self());
+	/* Any guest thread may enter: locks are always on, as after a
+	 * pthread_create (musl's mallocng, stdio and the rest test this). */
+	libc.need_locks = 1;
+	libc.threads_minus_1 = 1 << 24; /* never back to 0 as threads exit */
 	load_environ();
 	/* The module's constructors: nothing else runs them, as no
 	 * __libc_start_main does. */
