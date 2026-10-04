@@ -17,8 +17,14 @@ __attribute__((__import_module__("gex"), __import_name__("syscall")))
 void __gex_syscall_import(int, long long);
 void __gex_signal_frames(volatile unsigned long long *, unsigned long long);
 
+/* brk is the guest program's (a provider sharing its process must not
+ * move the program break under the guest's malloc): it fails, and musl's
+ * malloc takes mmap instead. */
+#define __GEX_SYS_BRK 12
+
 static inline long __gex_sc(long n, long a, long b, long c, long d, long e, long f)
 {
+	if (n == __GEX_SYS_BRK) return -12; /* ENOMEM */
 	volatile unsigned long long *x = (volatile unsigned long long *)__gex_get_ctx();
 	unsigned long long pc = x[32];
 	unsigned long long s_rcx = x[1], s_rdx = x[2], s_rsi = x[6], s_rdi = x[7];
