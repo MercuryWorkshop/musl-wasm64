@@ -34,6 +34,20 @@ void __wasm_call_ctors(void);
 
 static volatile int init_state; /* 0 none, 1 running, 2 done */
 
+/* The C stack gex gave this thread for its providers ([lo, lo + size)), so
+ * pthread_getattr_np reports it; a provider supplies it from the host. */
+static int no_stack(unsigned long *lo, unsigned long *size) { return -1; }
+weak_alias(no_stack, __gex_thread_stack);
+
+static void set_stack(pthread_t td)
+{
+	unsigned long lo, size;
+	if (__gex_thread_stack(&lo, &size) == 0) {
+		td->stack = (void *)(lo + size);
+		td->stack_size = size;
+	}
+}
+
 /* Read /proc/self/environ into a fresh environment (never freed). */
 static void load_environ(void)
 {
@@ -70,6 +84,7 @@ void __gex_provider_init(void)
 	 * thread gets the first TLS block (static_init_tls). */
 	static size_t fake[] = { 0, AT_PAGESZ, 4096, AT_UID, 0, AT_EUID, 0, AT_GID, 0, AT_EGID, 0, 0, 0 };
 	__init_libc((char **)fake, "gex-provider");
+	set_stack(__pthread_self());
 	load_environ();
 	/* The module's constructors: nothing else runs them, as no
 	 * __libc_start_main does. */
@@ -97,5 +112,6 @@ void __gex_provider_attach(void)
 	td->next = td->prev = td;
 	td->stack = 0;
 	td->stack_size = 0;
+	set_stack(td);
 	__wasm_init_tls(td->dtv);
 }
