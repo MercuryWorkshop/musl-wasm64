@@ -30,6 +30,7 @@ extern char **__environ;
 void *__copy_tls(unsigned char *);
 int __init_tp(void *);
 void __wasm_init_tls(void *);
+void __wasm_call_ctors(void);
 
 static volatile int init_state; /* 0 none, 1 running, 2 done */
 
@@ -70,6 +71,9 @@ void __gex_provider_init(void)
 	static size_t fake[] = { 0, AT_PAGESZ, 4096, AT_UID, 0, AT_EUID, 0, AT_GID, 0, AT_EGID, 0, 0, 0 };
 	__init_libc((char **)fake, "gex-provider");
 	load_environ();
+	/* The module's constructors: nothing else runs them, as no
+	 * __libc_start_main does. */
+	__wasm_call_ctors();
 	a_store(&init_state, 2);
 }
 
