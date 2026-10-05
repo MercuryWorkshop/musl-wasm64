@@ -85,6 +85,10 @@ void __gex_provider_init(void)
 	static size_t fake[] = { 0, AT_PAGESZ, 4096, AT_UID, 0, AT_EUID, 0, AT_GID, 0, AT_EGID, 0, 0, 0 };
 	__init_libc((char **)fake, "gex-provider");
 	set_stack(__pthread_self());
+	/* Thread-specific data: as pthread_create gives the main thread (no thread
+	 * of a provider is the program's main thread, so pthread_key_create's
+	 * own fallback would pick whichever thread calls it first). */
+	__pthread_self()->tsd = (void **)__pthread_tsd_main;
 	/* Any guest thread may enter: locks are always on, as after a
 	 * pthread_create (musl's mallocng, stdio and the rest test this). */
 	libc.need_locks = 1;
@@ -102,10 +106,15 @@ void __gex_provider_attach(void)
 		__gex_provider_init();
 		if (__get_tp()) return; /* this thread did the init */
 	}
-	void *mem = (void *)__syscall(SYS_mmap, 0, libc.tls_size, PROT_READ|PROT_WRITE,
+	/* TLS, then thread-specific data (pthread_getspecific), as pthread_create
+	 * lays them out; without its own tsd every attached thread's keys would
+	 * share the words at address 0. */
+	size_t tls = (libc.tls_size + 15) & -16;
+	void *mem = (void *)__syscall(SYS_mmap, 0, tls + __pthread_tsd_size, PROT_READ|PROT_WRITE,
 		MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
 	if ((unsigned long)mem > -4096UL) a_crash();
 	pthread_t td = __copy_tls(mem);
+	td->tsd = (void **)((char *)mem + tls);
 	td->self = td;
 	__set_thread_area(TP_ADJ(td));
 	td->detach_state = DT_DETACHED;
