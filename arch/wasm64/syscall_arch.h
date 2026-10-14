@@ -16,6 +16,7 @@ unsigned long __gex_get_ctx(void);
 __attribute__((__import_module__("gex"), __import_name__("syscall")))
 void __gex_syscall_import(int, long long);
 void __gex_signal_frames(volatile unsigned long long *, unsigned long long);
+unsigned long __gex_get_sp(void);
 
 /* brk is the guest program's (a provider sharing its process must not
  * move the program break under the guest's malloc): it fails, and musl's
@@ -29,6 +30,7 @@ static inline long __gex_sc(long n, long a, long b, long c, long d, long e, long
 	unsigned long long pc = x[32];
 	unsigned long long s_rcx = x[1], s_rdx = x[2], s_rsi = x[6], s_rdi = x[7];
 	unsigned long long s_r8 = x[8], s_r9 = x[9], s_r10 = x[10], s_r11 = x[11];
+	unsigned long long s_rsp = x[4];
 	x[0] = (unsigned long)n;
 	x[7] = (unsigned long)a;
 	x[6] = (unsigned long)b;
@@ -36,12 +38,17 @@ static inline long __gex_sc(long n, long a, long b, long c, long d, long e, long
 	x[10] = (unsigned long)d;
 	x[8] = (unsigned long)e;
 	x[9] = (unsigned long)f;
+	/* RSP is the C stack pointer for the call, so a signal frame the
+	 * kernel builds at its return lands below everything live (as the
+	 * wasm32 stub does); the guest's own RSP comes back afterwards. */
+	x[4] = (__gex_get_sp() - 256) & -16UL;
 	__gex_syscall_import((int)(unsigned long)x, (long long)pc);
 	if (__builtin_expect(x[32] != pc, 0))
 		__gex_signal_frames(x, pc);
 	long r = (long)x[0];
 	x[1] = s_rcx; x[2] = s_rdx; x[6] = s_rsi; x[7] = s_rdi;
 	x[8] = s_r8; x[9] = s_r9; x[10] = s_r10; x[11] = s_r11;
+	x[4] = s_rsp;
 	return r;
 }
 
