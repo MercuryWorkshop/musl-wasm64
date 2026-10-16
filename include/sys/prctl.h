@@ -178,6 +178,29 @@ struct prctl_mm_map {
 #define PR_PAC_GET_ENABLED_KEYS 61
 
 int prctl (int, ...);
+#if defined(__wasm64__) && !defined(__GEX_NO_SYSCALL_WIDEN)
+/* wasm64: prctl reads four unsigned longs; widen int arguments at the call
+ * (see syscall in unistd.h). */
+#ifdef __cplusplus
+extern "C++" {
+template <class __T> static inline unsigned long __gex_prarg(__T __x) { return (unsigned long)__x; }
+static inline unsigned long __gex_prarg(decltype(nullptr)) { return 0; }
+}
+#define __GEX_PRA(x) __gex_prarg(x)
+#else
+#define __GEX_PRA(x) ((unsigned long)(x))
+#endif
+#define __GEX_PR_N(...) __GEX_PR_N_(__VA_ARGS__,5,4,3,2,1,)
+#define __GEX_PR_N_(a,b,c,d,e,n,...) n
+#define __GEX_PR_C(a,b) __GEX_PR_C_(a,b)
+#define __GEX_PR_C_(a,b) a##b
+#define __GEX_PR1(o) prctl(o)
+#define __GEX_PR2(o,a) prctl(o,__GEX_PRA(a))
+#define __GEX_PR3(o,a,b) prctl(o,__GEX_PRA(a),__GEX_PRA(b))
+#define __GEX_PR4(o,a,b,c) prctl(o,__GEX_PRA(a),__GEX_PRA(b),__GEX_PRA(c))
+#define __GEX_PR5(o,a,b,c,d) prctl(o,__GEX_PRA(a),__GEX_PRA(b),__GEX_PRA(c),__GEX_PRA(d))
+#define prctl(...) __GEX_PR_C(__GEX_PR,__GEX_PR_N(__VA_ARGS__))(__VA_ARGS__)
+#endif
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,5 @@
 #include <sys/prctl.h>
+#undef prctl
 #include <stdarg.h>
 #include "syscall.h"
 

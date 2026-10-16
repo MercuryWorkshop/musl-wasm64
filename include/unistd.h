@@ -178,6 +178,33 @@ void endusershell(void);
 char *getusershell(void);
 int acct(const char *);
 long syscall(long, ...);
+#if defined(__wasm64__) && !defined(__GEX_NO_SYSCALL_WIDEN)
+/* wasm64 (gex W64): a variadic argument takes its own type's size, so an
+ * int passed to syscall() fills 4 bytes while syscall() reads 8-byte longs
+ * (futex(addr, op, val, timeout) reached the kernel as val = timeout).
+ * Widen every argument to long at the call, as x86-64's registers do. */
+#ifdef __cplusplus
+extern "C++" {
+template <class __T> static inline long __gex_scarg(__T __x) { return (long)__x; }
+static inline long __gex_scarg(decltype(nullptr)) { return 0; }
+}
+#define __GEX_SCA(x) __gex_scarg(x)
+#else
+#define __GEX_SCA(x) ((long)(x))
+#endif
+#define __GEX_SC_N(...) __GEX_SC_N_(__VA_ARGS__,7,6,5,4,3,2,1,)
+#define __GEX_SC_N_(a,b,c,d,e,f,g,n,...) n
+#define __GEX_SC_C(a,b) __GEX_SC_C_(a,b)
+#define __GEX_SC_C_(a,b) a##b
+#define __GEX_SC1(n) syscall(__GEX_SCA(n))
+#define __GEX_SC2(n,a) syscall(__GEX_SCA(n),__GEX_SCA(a))
+#define __GEX_SC3(n,a,b) syscall(__GEX_SCA(n),__GEX_SCA(a),__GEX_SCA(b))
+#define __GEX_SC4(n,a,b,c) syscall(__GEX_SCA(n),__GEX_SCA(a),__GEX_SCA(b),__GEX_SCA(c))
+#define __GEX_SC5(n,a,b,c,d) syscall(__GEX_SCA(n),__GEX_SCA(a),__GEX_SCA(b),__GEX_SCA(c),__GEX_SCA(d))
+#define __GEX_SC6(n,a,b,c,d,e) syscall(__GEX_SCA(n),__GEX_SCA(a),__GEX_SCA(b),__GEX_SCA(c),__GEX_SCA(d),__GEX_SCA(e))
+#define __GEX_SC7(n,a,b,c,d,e,f) syscall(__GEX_SCA(n),__GEX_SCA(a),__GEX_SCA(b),__GEX_SCA(c),__GEX_SCA(d),__GEX_SCA(e),__GEX_SCA(f))
+#define syscall(...) __GEX_SC_C(__GEX_SC,__GEX_SC_N(__VA_ARGS__))(__VA_ARGS__)
+#endif
 int execvpe(const char *, char *const [], char *const []);
 int issetugid(void);
 int getentropy(void *, size_t);
